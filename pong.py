@@ -48,11 +48,7 @@ def main(render: bool = False):
         state = preprocess(observation)
         action = agent.sample_action(state=state)
         observation, reward, episode_done, info = env.step(action)
-
-        if render:
-            env.render()
-
-        agent.update(reward=reward, reset_value=(reward == 1), reset_episode=episode_done)
+        agent.register(reward=reward, reset_discounted_reward=(reward == 1), episode_done=episode_done)
 
         if episode_done:
             env.reset()
@@ -61,6 +57,9 @@ def main(render: bool = False):
 
         if episode_count % BATCH_SIZE == 0:
             agent.update_policy()
+
+        if render:
+            env.render()
 
     env.close()
 
