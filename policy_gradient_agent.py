@@ -10,8 +10,35 @@ import tensorflow as tf
 import numpy as np
 from typing import Tuple
 
+class Memory:
+    """TODO: Docs"""
+    def __init__(self):
+        self.states = []
+        self.actions = []
+        self.rewards = []
+
+    
+    def store(self, state: tf.Tensor, action: int, reward: int):
+        """Add state, action, reward per timeframe."""
+        self.states.append(state)
+        self.actions.append(action)
+        if reward is not None:
+            self.rewards.append(reward)
+
+
+    def clear(self):
+        """Clear the memory."""
+        self.states = []
+        self.actions = []
+        self.rewards = []
+
 class PolicyGradientAgent:
+    """TODO: Docs"""
     def __init__(self, input_shape: Tuple[int, int]):
+        # Memory
+        self.memory = Memory()
+
+        # Layers
         self.conv1 = tf.keras.layers.Conv2D(input_shape=input_shape, filters=16, kernel_size=8, strides=4, activation='relu', data_format="channels_last") # 16 8x8 conv, stride 4
         self.conv2 = tf.keras.layers.Conv2D(filters=32, kernel_size=4, strides=2, activation='relu') # 32 4x4 conv, stride 2
         self.flatten = tf.keras.layers.Flatten()
@@ -29,7 +56,7 @@ class PolicyGradientAgent:
         return l5
 
     def sample_action(self, state: tf.Tensor) -> tf.Tensor:
-        """Sampling action from a given state."""
+        """Sampling action from a given state and store the actions to memory."""
         prob = self._forward_pass(state)
         return 2 if np.random.uniform() < prob[0][0] else 5
         
