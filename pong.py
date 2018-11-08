@@ -51,6 +51,8 @@ def main(render: bool = False):
     env = gym.make('Pong-v0')
     episode_count = 0
 
+    batch_gradient_buffer = []
+
     while True:
         observation = env.reset()
         prev_frame = tf.zeros((1, 80, 80, 1), dtype=tf.float32)
@@ -85,6 +87,9 @@ def main(render: bool = False):
             if episode_done:
                 print('Episode: {}'.format(episode_count))
                 episode_count += 1
+
+                # parameter update (rmsprop)
+                if episode_number % BATCH_SIZE == 0:
 
                 # optimizer.apply_gradients(zip(gradients, policy.variables),
                 #         global_step=tf.train.get_or_create_global_step())
