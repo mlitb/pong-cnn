@@ -9,10 +9,11 @@
         3. Abram Perdanaputra https://github.com/abrampers
 """
 
+import os
 import gym
 import argparse
-import numpy as np
 import tensorflow as tf
+import numpy as np
 from model import Model
 
 from typing import Dict, List
@@ -29,7 +30,6 @@ Gradient = Dict[str, np.ndarray]
 BATCH_SIZE = 10
 LEARNING_RATE = 1e-3
 DISCOUNT_FACTOR = .99
-
 
 def preprocess(frame: np.ndarray) -> np.ndarray:
     """
@@ -61,14 +61,21 @@ def normal_discounted_rewards(episode_buffer: EpisodeBuffer, discount_factor: fl
     return discounted_reward
 
 
-def main(render: bool = False):
+def main(load_fname: str, save_dir: str, render: bool) -> None:
     """
         Main training loop.
     """
     policy = Model((80, 80, 1))
-    optimizer = tf.train.RMSPropOptimizer(LEARNING_RATE)
+    optimizer = tf.train.RMSPropOptimizer(LEARNING_RATE, name='RMSProp')
     env = gym.make('Pong-v0')
     episode_number = 0
+
+    # if load_fname is not None:
+    #     # load json and create model
+    #     json_file = open('model.json', 'r')
+    #     loaded_model_json = json_file.read()
+    #     json_file.close()
+    #     policy.load_weights(load_fname)
 
     batch_gradient = None
     batch_rewards = []
@@ -143,12 +150,27 @@ def main(render: bool = False):
                             sum(batch_rewards) / len(batch_rewards)))
                     batch_rewards = []
 
+                # # save model
+                # if episode_number % 1 == 0 and save_dir is not None:
+                #     if not os.path.exists(save_dir):
+                #         os.makedirs(save_dir)
+                #     save_fname = os.path.join(save_dir, 'save_{}.h5'.format(episode_number))
+                #     # serialize model to JSON
+                #     model_json = policy.to_json()
+                #     with open("model.json", "w") as json_file:
+                #         json_file.write(model_json)
+                #     print("Saved model to disk")
+                #     policy.save_weights(save_fname)
+                #     print('Model saved to \'{}\'!'.format(save_fname))
+
         env.close()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train an RL agent to play the mighty game of Pong.')
     parser.add_argument('-r', '--render', action="store_true", default=False, help='whether to render the environment or not')
+    parser.add_argument('-l', '--load', action="store", default=None, help='path to the saved model to load from')
+    parser.add_argument('-s', '--save', action="store", default=None, help='path to the folder to save model')
     args = parser.parse_args()
-    main(render=args.render)
+    main(load_fname=args.load, save_dir=args.save, render=args.render)
     
