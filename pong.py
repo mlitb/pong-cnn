@@ -44,7 +44,7 @@ def preprocess(frame: np.ndarray) -> np.ndarray:
     return tf.convert_to_tensor(frame, dtype=tf.float32)
 
 
-def normal_discounted_reward(episode_buffer: EpisodeBuffer, discount_factor: float) -> float:
+def normal_discounted_rewards(episode_buffer: EpisodeBuffer, discount_factor: float) -> float:
     """
         Calculate the normalized and discounted reward for the current episode.
     """
@@ -68,9 +68,10 @@ def main(render: bool = False):
     policy = Model((80, 80, 1))
     optimizer = tf.train.RMSPropOptimizer(LEARNING_RATE)
     env = gym.make('Pong-v0')
-    episode_count = 0
+    episode_number = 0
 
-    batch_gradient_buffer = []
+    batch_gradient = None
+    batch_rewards = []
 
     while True:
         observation = env.reset()
@@ -105,18 +106,44 @@ def main(render: bool = False):
 
             if episode_done:
                 # calculate discounted reward of every step
-                episode_reward = normal_discounted_reward(episode_buffer, 
+                episode_rewards = normal_discounted_rewards(episode_buffer, 
                         DISCOUNT_FACTOR)
-                
-                print('Episode: {}'.format(episode_count))
-                episode_count += 1
+                episode_gradient = None
+                for idx, step_gradient in enumerate(episode_buffer['gradient']):
+                    step_gradient = [tf.scalar_mul(episode_rewards[idx][0], var_grad) \
+                            for var_grad in episode_buffer['gradient'][idx]]
+                    if episode_gradient is None:
+                        episode_gradient = step_gradient
+                    else:
+                        episode_gradient = [tf.add(episode_gradient[i], 
+                                step_gradient[i]) for i in range(len(episode_gradient))]
 
+                # bookeeping
+                batch_rewards.append(sum(episode_buffer['reward']))
+                episode_number += 1
+
+                # training info
+                print('Episode: {}, rewards: {}'.format(episode_number, 
+                        sum(episode_buffer['reward'])))
+                
                 # parameter update (rmsprop)
                 if episode_number % BATCH_SIZE == 0:
-                    # optimizer.apply_gradients(zip(gradients, policy.variables),
-                    #         global_step=tf.train.get_or_create_global_step())
+                    if batch_gradient is None:
+                        batch_gradient = episode_gradient
+                    else:
+                        batch_gradient = [tf.add(batch_gradient[i], 
+                                episode_gradient[i]) for i in len(batch_gradient)]
+                    
+                    optimizer.apply_gradients(zip(episode_gradient, policy.variables),
+                            global_step=tf.train.get_or_create_global_step())
+                    batch_gradient = None
 
-    env.close()
+                    # training info
+                    print('Batch: {}, avg episode rewards: {}'.format(episode_number // BATCH_SIZE, 
+                            sum(batch_rewards) / len(batch_rewards)))
+                    batch_rewards = []
+
+        env.close()
 
 
 if __name__ == '__main__':
