@@ -27,6 +27,8 @@ Gradient = Dict[str, np.ndarray]
 
 # Training hyperparameters
 BATCH_SIZE = 10
+LEARNING_RATE = 1e-3
+DISCOUNT_FACTOR = .99
 
 
 def preprocess(frame: np.ndarray) -> np.ndarray:
@@ -42,12 +44,29 @@ def preprocess(frame: np.ndarray) -> np.ndarray:
     return tf.convert_to_tensor(frame, dtype=tf.float32)
 
 
+def normal_discounted_reward(episode_buffer: EpisodeBuffer, discount_factor: float) -> float:
+    """
+        Calculate the normalized and discounted reward for the current episode.
+    """
+    reward = episode_buffer['reward']
+    discounted_reward = np.zeros((len(reward), 1))
+    future_reward = 0
+    for i in range(len(reward) - 1, -1, -1):
+        if reward[i] != 0: # reset future reward after each score
+            future_reward = 0
+        discounted_reward[i][0] = reward[i] + discount_factor * future_reward
+        future_reward = discounted_reward[i][0]
+    discounted_reward -= np.mean(discounted_reward)
+    discounted_reward /= np.std(discounted_reward)
+    return discounted_reward
+
+
 def main(render: bool = False):
     """
         Main training loop.
     """
     policy = Model((80, 80, 1))
-    optimizer = tf.train.RMSPropOptimizer(1e-3)
+    optimizer = tf.train.RMSPropOptimizer(LEARNING_RATE)
     env = gym.make('Pong-v0')
     episode_count = 0
 
@@ -85,14 +104,17 @@ def main(render: bool = False):
             episode_buffer['reward'].append(reward)
 
             if episode_done:
+                # calculate discounted reward of every step
+                episode_reward = normal_discounted_reward(episode_buffer, 
+                        DISCOUNT_FACTOR)
+                
                 print('Episode: {}'.format(episode_count))
                 episode_count += 1
 
                 # parameter update (rmsprop)
                 if episode_number % BATCH_SIZE == 0:
-
-                # optimizer.apply_gradients(zip(gradients, policy.variables),
-                #         global_step=tf.train.get_or_create_global_step())
+                    # optimizer.apply_gradients(zip(gradients, policy.variables),
+                    #         global_step=tf.train.get_or_create_global_step())
 
     env.close()
 
