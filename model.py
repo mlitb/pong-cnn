@@ -1,37 +1,17 @@
 """
     A policy gradient agent with convolutional neural network.
 
-    More Info : https://github.com/mlitb/pong-cnn
+    More Info: https://github.com/mlitb/pong-cnn
     Authors:
         1. Faza Fahleraz https://github.com/ffahleraz
         2. Nicholas Rianto Putra https://github.com/nicholaz99
         3. Abram Perdanaputra https://github.com/abrampers
 """
+
+
 import numpy as np
 import tensorflow as tf
 from typing import Tuple
-
-class Memory:
-    """TODO: Docs"""
-    def __init__(self):
-        self.states = []
-        self.actions = []
-        self.rewards = []
-
-    
-    def store(self, state: tf.Tensor, action: int, reward: int):
-        """Add state, action, reward per timeframe."""
-        self.states.append(state)
-        self.actions.append(action)
-        if reward is not None:
-            self.rewards.append(reward)
-
-
-    def clear(self):
-        """Clear the memory."""
-        self.states = []
-        self.actions = []
-        self.rewards = []
 
 
 class Model(tf.keras.Model):
@@ -43,7 +23,7 @@ class Model(tf.keras.Model):
                 activation='relu')
         self.flatten = tf.keras.layers.Flatten()
         self.fully_connected = tf.keras.layers.Dense(256, activation='relu')
-        self.probability = tf.keras.layers.Dense(1, activation='sigmoid')
+        self.move_probability = tf.keras.layers.Dense(1, activation='sigmoid')
 
 
     def call(self, inputs: tf.Tensor) -> tf.Tensor:
@@ -52,5 +32,5 @@ class Model(tf.keras.Model):
         l2 = self.convolution_2(l1)
         l3 = self.flatten(l2)
         l4 = self.fully_connected(l3)
-        l5 = self.probability(l4)
+        l5 = self.move_probability(l4)
         return l5
