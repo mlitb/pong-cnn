@@ -128,6 +128,8 @@ def main(load_fname: str, save_dir: str, render: bool) -> None:
 
             with tf.GradientTape() as tape:
                 error = y_true * tf.log(y) + (1 - y_true) * tf.log(y)
+                loss_value = tf.reduce_mean(error)
+            gradients = tape.gradient(loss_value, model.variables)
             
             # perform action and get new observation
             observation, reward, episode_done, info = env.step(action)

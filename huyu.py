@@ -21,7 +21,7 @@ model = Model()
 with tf.GradientTape() as tape:
   error = model(x) - y
   loss_value = tf.reduce_mean(tf.square(error))
-  print(loss_value)
+print(model.variables)
 gradients = tape.gradient(loss_value, model.variables)
 print(gradients)
 optimizer.apply_gradients(zip(gradients, model.variables),
