@@ -17,6 +17,7 @@ from typing import Tuple
 class Model(tf.keras.Model):
     """TODO: Docs"""
     def __init__(self, input_shape: Tuple[int, int, int]):
+        super(Model, self).__init__()
         self.convolution_1 = tf.keras.layers.Conv2D(input_shape=input_shape, filters=16, 
                 kernel_size=8, strides=4, activation='relu', data_format="channels_last")
         self.convolution_2 = tf.keras.layers.Conv2D(filters=32, kernel_size=4, strides=2, 
@@ -28,7 +29,7 @@ class Model(tf.keras.Model):
 
     def call(self, inputs: tf.Tensor) -> tf.Tensor:
         """Compute the probability distribution of actions according to the policy."""
-        l1 = self.convolution_1(state)
+        l1 = self.convolution_1(inputs)
         l2 = self.convolution_2(l1)
         l3 = self.flatten(l2)
         l4 = self.fully_connected(l3)

@@ -13,9 +13,16 @@ import gym
 import argparse
 import numpy as np
 import tensorflow as tf
-from agent import Agent
+from model import Model
+
+from typing import Dict, List
 
 tf.enable_eager_execution()
+
+
+# Type shorthands
+EpisodeBuffer = Dict[str, List]
+Gradient = Dict[str, np.ndarray]
 
 
 # Training hyperparameters
@@ -39,24 +46,45 @@ def main(render: bool = False):
     """
         Main training loop.
     """
-    episode_count = 0
-    agent = Agent((80, 80, 1))
+    policy = Model((80, 80, 1))
+    optimizer = tf.train.RMSPropOptimizer(1e-3)
+
     env = gym.make('Pong-v0')
     observation = env.reset()
 
+    episode_count = 0
+    prev_frame = tf.zeros((1, 80, 80, 1), dtype=tf.float32)
+    episode_buffer = {
+        'gradient': [],
+        'reward': []
+    }
+
     while True:
-        state = preprocess(observation)
-        action = agent.sample_action(state=state)
+        # preprocess input vector
+        frame = preprocess(observation)
+        x = frame - prev_frame
+        prev_frame = frame
+
+        # forward pass
+        with tf.GradientTape() as tape:
+            y = policy.call(x)
+            action, y_true = (2, 1.0) if np.random.uniform() < y[0][0] else (5, 0.0)
+            error = y_true * tf.log(y) + (1 - y_true) * tf.log(y)
+            loss_value = tf.reduce_mean(error)
+        gradient = tape.gradient(loss_value, policy.variables)
+        episode_buffer['gradient'].append(gradient)
+        
+        # perform action and get new observation
         observation, reward, episode_done, info = env.step(action)
-        agent.register(reward=reward, reset_discounted_reward=(reward == 1), episode_done=episode_done)
+        episode_buffer['reward'].append(reward)
 
         if episode_done:
             env.reset()
-            episode_count += 1
             print('Episode: {}'.format(episode_count))
+            episode_count += 1
 
-        if episode_count % BATCH_SIZE == 0:
-            agent.update_policy()
+            # optimizer.apply_gradients(zip(gradients, policy.variables),
+            #         global_step=tf.train.get_or_create_global_step())
 
         if render:
             env.render()
