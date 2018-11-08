@@ -20,8 +20,8 @@ optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.01)
 model = Model()
 with tf.GradientTape() as tape:
   error = model(x) - y
-  print(error.shape)
   loss_value = tf.reduce_mean(tf.square(error))
+  print(loss_value)
 gradients = tape.gradient(loss_value, model.variables)
 print(gradients)
 optimizer.apply_gradients(zip(gradients, model.variables),
