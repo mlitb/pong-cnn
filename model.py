@@ -34,7 +34,7 @@ class Memory:
         self.rewards = []
 
 
-class Agent:
+class Model(tf.keras.Model):
     """TODO: Docs"""
     def __init__(self, input_shape: Tuple[int, int, int]):
         self.convolution_1 = tf.keras.layers.Conv2D(input_shape=input_shape, filters=16, 
@@ -46,7 +46,7 @@ class Agent:
         self.probability = tf.keras.layers.Dense(1, activation='sigmoid')
 
 
-    def forward_pass(self, state: tf.Tensor) -> tf.Tensor:
+    def call(self, inputs: tf.Tensor) -> tf.Tensor:
         """Compute the probability distribution of actions according to the policy."""
         l1 = self.convolution_1(state)
         l2 = self.convolution_2(l1)
@@ -54,21 +54,3 @@ class Agent:
         l4 = self.fully_connected(l3)
         l5 = self.probability(l4)
         return l5
-
-
-    def sample_action(self, state: tf.Tensor) -> tf.Tensor:
-        """Sample action according to the policy from a given state."""
-        prob = self._forward_pass(state)
-        if np.random.uniform() < prob[0][0]:
-
-        return 2 if np.random.uniform() < prob[0][0] else 5
-
-
-    def register(self, reward: float, reset_discounted_reward: bool, episode_done: bool):
-        """TODO: Docs"""
-        pass
-
-
-    def update_policy(self):
-        """TODO: Docs"""
-        pass

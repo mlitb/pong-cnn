@@ -13,13 +13,12 @@ import argparse
 import numpy as np
 import pickle as pkl
 import tensorflow as tf
-from agent import Agent
+from model import Model
 
 from typing import Dict, List
 
 
 # Type shorthands
-Model = Dict[np.ndarray, np.ndarray]
 EpisodeBuffer = Dict[str, List]
 Gradient = Dict[str, np.ndarray]
 
@@ -58,7 +57,7 @@ def main(load_fname: str, save_dir: str, render: bool) -> None:
     """
         Main training loop.
     """
-    agent = Agent((80, 80, 1))
+    model = Model((80, 80, 1))
     batch_size = 10
     input_layer_size = 6400
     hidden_layer_size_1 = 800
@@ -123,9 +122,12 @@ def main(load_fname: str, save_dir: str, render: bool) -> None:
             prev_frame = frame
 
             # forward pass
-            y = agent.forward_pass(x, model, episode_buffer)
-            action, y_true = (2, 1.0) if np.random.uniform() < y else (5, 0.0)
+            y = model.call(x)
+            action, y_true = (2, 1.0) if np.random.uniform() < y[0][0] else (5, 0.0)
             episode_buffer['y_true'].append(y_true)
+
+            with tf.GradientTape() as tape:
+                error = y_true * tf.log(y) + (1 - y_true) * tf.log(y)
             
             # perform action and get new observation
             observation, reward, episode_done, info = env.step(action)
@@ -135,7 +137,7 @@ def main(load_fname: str, save_dir: str, render: bool) -> None:
             if episode_done:
                 # backward pass
                 episode_reward = normal_discounted_reward(episode_buffer, discount_factor)
-                gradient = agent.backward_pass(model, episode_buffer, episode_reward)
+                gradient = model.backward_pass(model, episode_buffer, episode_reward)
                 for key in model:
                     batch_gradient_buffer[key] += gradient[key]
 
