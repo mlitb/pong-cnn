@@ -48,46 +48,46 @@ def main(render: bool = False):
     """
     policy = Model((80, 80, 1))
     optimizer = tf.train.RMSPropOptimizer(1e-3)
-
     env = gym.make('Pong-v0')
-    observation = env.reset()
-
     episode_count = 0
-    prev_frame = tf.zeros((1, 80, 80, 1), dtype=tf.float32)
-    episode_buffer = {
-        'gradient': [],
-        'reward': []
-    }
 
     while True:
-        # preprocess input vector
-        frame = preprocess(observation)
-        x = frame - prev_frame
-        prev_frame = frame
+        observation = env.reset()
+        prev_frame = tf.zeros((1, 80, 80, 1), dtype=tf.float32)
+        episode_done = False
+        episode_buffer = {
+            'gradient': [],
+            'reward': []
+        }
 
-        # forward pass
-        with tf.GradientTape() as tape:
-            y = policy.call(x)
-            action, y_true = (2, 1.0) if np.random.uniform() < y[0][0] else (5, 0.0)
-            error = y_true * tf.log(y) + (1 - y_true) * tf.log(y)
-            loss_value = tf.reduce_mean(error)
-        gradient = tape.gradient(loss_value, policy.variables)
-        episode_buffer['gradient'].append(gradient)
-        
-        # perform action and get new observation
-        observation, reward, episode_done, info = env.step(action)
-        episode_buffer['reward'].append(reward)
+        while not episode_done:
+            if render:
+                env.render()
 
-        if episode_done:
-            env.reset()
-            print('Episode: {}'.format(episode_count))
-            episode_count += 1
+            # preprocess input
+            frame = preprocess(observation)
+            x = frame - prev_frame
+            prev_frame = frame
 
-            # optimizer.apply_gradients(zip(gradients, policy.variables),
-            #         global_step=tf.train.get_or_create_global_step())
+            # forward pass
+            with tf.GradientTape() as tape:
+                y = policy.call(x)
+                action, y_true = (2, 1.0) if np.random.uniform() < y[0][0] else (5, 0.0)
+                error = y_true * tf.log(y) + (1 - y_true) * tf.log(y)
+                loss_value = tf.reduce_mean(error)
+            gradient = tape.gradient(loss_value, policy.variables)
+            episode_buffer['gradient'].append(gradient)
+            
+            # perform action and get new observation
+            observation, reward, episode_done, info = env.step(action)
+            episode_buffer['reward'].append(reward)
 
-        if render:
-            env.render()
+            if episode_done:
+                print('Episode: {}'.format(episode_count))
+                episode_count += 1
+
+                # optimizer.apply_gradients(zip(gradients, policy.variables),
+                #         global_step=tf.train.get_or_create_global_step())
 
     env.close()
 
